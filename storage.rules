@@ -1,0 +1,30 @@
+// Regras de Segurança do Firebase Storage
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Regras para mensagens
+    match /voxen_v2_messages/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Regras para galeria
+    match /voxen_v2_gallery/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Regras para timeline
+    match /voxen_v2_timeline/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Regras para avatares de usuários
+    match /voxen_v2_users/{userId}/avatar/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Regras para música de fundo
+    match /voxen_v2_music/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

@@ -1,0 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400..900;1,400..900&display=swap');
+@config "../../tailwind.config.js";
+@import "tailwindcss";
+
+:root {
+  /* Voxen Definitive Theme - slate dark background and gold primary */
+  --background: 222 47% 4%; /* #05080c */
+  --foreground: 45 25% 90%; 
+  
+  --primary: 41 30% 49%; /* Voxen Gold #a18a5a */
+  --primary-foreground: 222 47% 4%;
+
+  --secondary: 222 30% 14%;
+  --secondary-foreground: 45 25% 90%;
+  
+  --card: 222 47% 6%;
+  --card-foreground: 45 25% 90%;
+  
+  --accent: 41 30% 20%;
+  --accent-foreground: 45 25% 95%;
+
+  --muted: 222 25% 10%;
+  --muted-foreground: 45 14% 72%;
+
+  --destructive: 0 72% 45%;
+  --destructive-foreground: 0 0% 98%;
+
+  --popover: 222 47% 6%;
+  --popover-foreground: 45 25% 90%;
+  
+  --border: 222 47% 12%;
+  --input: 222 47% 10%;
+  --ring: 41 30% 49%;
+  
+  --radius: 0px; /* Voxen uses sharp, professional corners */
+}
+
+@layer base {
+  html {
+    @apply bg-[#05080c] text-foreground;
+    background-color: #05080c !important;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  body {
+    @apply bg-[#05080c] text-foreground antialiased;
+    background-color: #05080c !important;
+    color: hsl(var(--foreground));
+    font-family: 'Alegreya', serif;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  * {
+    @apply border-border;
+  }
+}
+
+@keyframes splash-out {
+  0% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+.animate-splash-out-fast {
+  animation: splash-out 1.2s ease-in forwards;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 4s ease-in-out infinite;
+}
+
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #05080c;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(161, 138, 90, 0.2);
+  border-radius: 0px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(161, 138, 90, 0.4);
+}

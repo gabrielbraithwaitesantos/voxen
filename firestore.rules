@@ -1,0 +1,35 @@
+// Regras de Segurança do Firestore
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Regras para usuários
+    match /voxen_v2_users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Regras para mensagens
+    match /voxen_v2_messages/{messageId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Regras para galeria
+    match /voxen_v2_gallery/{imageId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Regras para timeline
+    match /voxen_v2_timeline/{eventId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Regras para conquistas do usuário
+    match /voxen_v2_user_achievements/{achievementId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
+    // Regras para configurações
+    match /config/{configId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
