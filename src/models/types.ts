@@ -7,6 +7,18 @@ export interface UserProfile {
   voxenId: string;
   joinDate: string; // ISO 8601
   level: string;
+  role?: 'disciple' | 'tutor' | 'admin';
+  onboarding?: {
+    hasSeenWelcome: boolean;
+    hasReadGuidelines: boolean;
+    hasPostedFirstDailyPractice: boolean;
+    completedAt?: string; // ISO 8601
+  };
+  access?: {
+    knowledgeUnlocked: boolean;
+    labUnlocked: boolean;
+    eliteUnlocked: boolean;
+  };
   avatarUrl?: string;
   avatarPath?: string;
   displayName?: string;

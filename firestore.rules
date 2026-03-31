@@ -12,6 +12,11 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
+    // Regras para chat da comunidade
+    match /voxen_v2_community_messages/{messageId} {
+      allow read, write: if request.auth != null;
+    }
+
     // Regras para galeria
     match /voxen_v2_gallery/{imageId} {
       allow read, write: if request.auth != null;
@@ -24,7 +29,16 @@ service cloud.firestore {
 
     // Regras para conquistas do usuário
     match /voxen_v2_user_achievements/{achievementId} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
+    // Regras para entrada inicial de prática diária
+    match /voxen_v2_daily_practice_entries/{entryId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
 
     // Regras para configurações

@@ -32,6 +32,7 @@ interface TrackPageProps {
   nextStepHref: Route;
   nextStepCta: string;
   actions: TrackAction[];
+  children?: React.ReactNode;
 }
 
 export function TrackPage({
@@ -45,6 +46,7 @@ export function TrackPage({
   nextStepHref,
   nextStepCta,
   actions,
+  children,
 }: TrackPageProps) {
   return (
     <div className="relative min-h-full bg-[#05080c] px-4 pb-16 pt-10 sm:px-8">
@@ -131,6 +133,8 @@ export function TrackPage({
             </div>
           </aside>
         </section>
+
+        {children ? <section className="mt-8">{children}</section> : null}
       </div>
     </div>
   );

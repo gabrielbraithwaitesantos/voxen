@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { FirebaseStorage } from 'firebase/storage';
 import { uploadImage, deleteImage as deleteStorageImage } from './storage';
+import { normalizeVoxenId } from '@/lib/voxen-id';
 
 const sanitizeFileName = (name: string) => encodeURIComponent(name.replace(/\s+/g, '_'));
 
@@ -204,15 +205,35 @@ export const updateBackgroundMusic = async (firestore: Firestore, storage: Fireb
 export const createUserProfile = async (
   firestore: Firestore,
   uid: string,
-  data: { displayName?: string; avatarFile?: File },
+  data: {
+    displayName?: string;
+    avatarFile?: File;
+    voxenId?: string;
+    role?: 'disciple' | 'tutor' | 'admin';
+  },
   storage?: FirebaseStorage
 ) => {
   const docRef = doc(firestore, 'voxen_v2_users', uid);
+  const normalizedVoxenId = data.voxenId ? normalizeVoxenId(data.voxenId) : '';
+  const resolvedRole = data.role || 'disciple';
   const payload: any = {
     uid,
-    voxenId: `VXN-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
+    voxenId:
+      normalizedVoxenId ||
+      `vxn-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
     joinDate: new Date().toISOString(),
-    level: 'Nível 1: Discípulo',
+    level: resolvedRole === 'tutor' ? 'Nível 2: Tutor' : 'Nível 1: Discípulo',
+    role: resolvedRole,
+    onboarding: {
+      hasSeenWelcome: false,
+      hasReadGuidelines: false,
+      hasPostedFirstDailyPractice: false,
+    },
+    access: {
+      knowledgeUnlocked: false,
+      labUnlocked: resolvedRole !== 'tutor',
+      eliteUnlocked: resolvedRole === 'tutor' || resolvedRole === 'admin',
+    },
   };
 
   if (data.displayName) payload.displayName = data.displayName;

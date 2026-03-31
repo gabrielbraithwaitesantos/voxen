@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Award, Info, LogIn } from 'lucide-react';
+import { useUser } from '@/firebase';
 
 type HubRoute = Route;
 
@@ -37,13 +38,13 @@ const cards: Array<{
 
 export default function HubPage() {
   const router = useRouter();
+  const { user, isUserLoading } = useUser();
 
   useEffect(() => {
-    const username = localStorage.getItem('username');
-    if (!username) {
+    if (!isUserLoading && !user) {
       router.replace('/login');
     }
-  }, [router]);
+  }, [isUserLoading, user, router]);
 
   return (
     <main

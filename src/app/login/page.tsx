@@ -2,34 +2,74 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, CircleUserRound, Info, Shield } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowRight, CircleUserRound, Info, Shield, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth, useFirestore, useUser, doc, getDoc } from '@/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { buildVoxenAuthEmail, formatVoxenIdForDisplay, normalizeVoxenId } from '@/lib/voxen-id';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
+  const auth = useAuth();
+  const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const canSubmit = username.trim().length > 0 && password.trim().length > 0;
 
   useEffect(() => {
-    const cachedUser = localStorage.getItem('username');
-    if (cachedUser) {
-      router.replace('/hub');
+    if (!isUserLoading && user) {
+      router.replace('/home');
     }
-  }, [router]);
+  }, [isUserLoading, user, router]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username.trim() && password.trim()) {
-      localStorage.setItem('username', username.trim());
+
+    if (!canSubmit || isSubmitting) return;
+
+    setErrorMessage('');
+    setIsSubmitting(true);
+
+    try {
+      const normalizedId = normalizeVoxenId(username);
+
+      if (normalizedId.length < 4) {
+        throw new Error('Informe um Voxen ID válido (mínimo de 4 caracteres).');
+      }
+
+      const authEmail = buildVoxenAuthEmail(normalizedId);
+      const credential = await signInWithEmailAndPassword(auth, authEmail, password);
+
+      const profileRef = doc(firestore, 'voxen_v2_users', credential.user.uid);
+      const profileSnapshot = await getDoc(profileRef);
+      const profileData = profileSnapshot.exists() ? profileSnapshot.data() : null;
+      const resolvedName = profileData?.displayName || profileData?.voxenId || formatVoxenIdForDisplay(normalizedId);
+
+      localStorage.setItem('username', String(resolvedName));
       setIsTransitioning(true);
-      setTimeout(() => router.push('/hub'), 450);
+
+      setTimeout(() => {
+        router.push('/home');
+      }, 280);
+    } catch (error: any) {
+      if (error?.code === 'auth/invalid-credential' || error?.code === 'auth/user-not-found' || error?.code === 'auth/wrong-password') {
+        setErrorMessage('Voxen ID ou senha incorretos.');
+      } else {
+        setErrorMessage(error?.message || 'Falha ao autenticar. Tente novamente.');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <motion.main
-      className={`min-h-screen px-5 py-8 text-[#e9dcc2] transition-opacity duration-500 md:px-10 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
+      className={`relative min-h-screen overflow-hidden px-5 py-8 text-[#e9dcc2] transition-opacity duration-500 md:px-10 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
       style={{
         background:
           'radial-gradient(circle at center, rgba(16, 44, 94, 0.62) 0%, rgba(5, 17, 43, 0.95) 46%, rgba(3, 9, 25, 1) 100%)',
@@ -38,6 +78,9 @@ export default function LoginPage() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.7 }}
     >
+      <div className="pointer-events-none absolute -left-16 top-10 h-64 w-64 rounded-full bg-[#f3d98f]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-[#80b9ff]/10 blur-3xl" />
+
       <motion.div
         className="pointer-events-none absolute inset-0 opacity-35"
         style={{
@@ -79,10 +122,11 @@ export default function LoginPage() {
         >
           <div className="mb-8 flex items-start justify-center gap-2 text-center text-[11px] uppercase tracking-[0.2em] text-[#efdba8]/85 md:text-sm md:tracking-[0.22em]">
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>Caso ainda não tenha seu Voxen ID, acesse suporte@voxen.com.br</p>
+            <p>Não tem Voxen ID? Crie agora na página oficial de entrada.</p>
           </div>
 
-          <div className="mx-auto mt-8 max-w-md rounded-2xl border border-[#e3c481]/10 bg-[#111b32]/45 p-6 md:p-8">
+          <div className="mx-auto mt-8 max-w-md rounded-2xl border border-[#e3c481]/15 bg-[#101a31]/70 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.35)] md:p-8">
+            <p className="mb-3 text-center text-[10px] uppercase tracking-[0.3em] text-[#e9dcc2]/55">Acesso seguro</p>
             <h1 className="mb-8 text-center text-3xl font-black uppercase tracking-wide md:text-4xl">Apresente-se aqui:</h1>
 
             <form onSubmit={handleLogin} className="space-y-8">
@@ -93,7 +137,9 @@ export default function LoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
-                  className="mt-2 w-full border-b border-[#e3c481]/45 bg-transparent pb-2 text-2xl outline-none focus:border-[#f3d98f]"
+                  autoComplete="username"
+                  placeholder="Digite seu Voxen ID (ex: gabriel.santos)"
+                  className="mt-2 w-full rounded-xl border border-[#e3c481]/35 bg-[#0a1326]/75 px-4 py-3 text-lg outline-none transition focus:border-[#f3d98f] focus:ring-2 focus:ring-[#f3d98f]/20"
                 />
               </div>
 
@@ -104,19 +150,41 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="mt-2 w-full border-b border-[#e3c481]/45 bg-transparent pb-2 text-2xl outline-none focus:border-[#f3d98f]"
+                  autoComplete="current-password"
+                  placeholder="Digite sua senha"
+                  className="mt-2 w-full rounded-xl border border-[#e3c481]/35 bg-[#0a1326]/75 px-4 py-3 text-lg outline-none transition focus:border-[#f3d98f] focus:ring-2 focus:ring-[#f3d98f]/20"
                 />
               </div>
 
               <motion.button
                 type="submit"
-                className="mx-auto mt-8 flex h-14 w-14 items-center justify-center rounded-full border border-[#e3c481]/70 text-[#e3c481] transition hover:bg-[#e3c481]/12 hover:scale-[1.04]"
-                aria-label="Entrar"
-                whileHover={{ scale: 1.06, backgroundColor: 'rgba(227, 196, 129, 0.16)' }}
-                whileTap={{ scale: 0.96 }}
+                disabled={!canSubmit || isSubmitting}
+                className={`group mt-2 flex w-full cursor-pointer items-center justify-center gap-3 rounded-xl border px-5 py-3.5 text-base font-black uppercase tracking-[0.16em] transition ${
+                  canSubmit && !isSubmitting
+                    ? 'border-[#e3c481]/75 bg-[#e3c481]/10 text-[#f4e5be] hover:bg-[#e3c481]/22'
+                    : 'cursor-not-allowed border-[#e3c481]/25 bg-[#0f1a30]/70 text-[#e9dcc2]/45'
+                }`}
+                aria-label="Avançar"
+                whileHover={canSubmit && !isSubmitting ? { scale: 1.02, y: -1 } : {}}
+                whileTap={canSubmit && !isSubmitting ? { scale: 0.98 } : {}}
               >
-                <ArrowRight className="h-7 w-7" />
+                {isSubmitting ? 'Autenticando...' : 'Entrar na plataforma'}
+                <ArrowRight className="h-5 w-5 transition group-hover:translate-x-0.5" />
               </motion.button>
+
+              {errorMessage ? (
+                <p className="inline-flex items-center gap-2 text-xs text-red-300">
+                  <AlertCircle className="h-4 w-4" />
+                  {errorMessage}
+                </p>
+              ) : null}
+
+              <div className="pt-1 text-center text-xs text-[#e9dcc2]/70">
+                Primeiro acesso?{' '}
+                <Link href="/voxen-id" className="font-bold uppercase tracking-[0.12em] text-[#f2dca8] hover:text-white">
+                  Criar Voxen ID
+                </Link>
+              </div>
             </form>
           </div>
         </motion.section>

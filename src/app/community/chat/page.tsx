@@ -2,45 +2,56 @@
 
 import { FormEvent, useMemo, useState } from 'react';
 import { MessageSquare, Send, Shield, Users } from 'lucide-react';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser, collection, query, orderBy, doc, setDoc } from '@/firebase';
+import { UserProfile } from '@/models/types';
 
-interface LocalMessage {
-  id: number;
+interface CommunityMessage {
+  id: string;
+  channel: string;
   sender: string;
   role: string;
   text: string;
-  timestamp: string;
+  createdAt: string;
 }
 
 const channelOptions = ['Geral', 'Inglês', 'Debate', 'Suporte'];
 
-const initialMessages: LocalMessage[] = [
-  {
-    id: 1,
-    sender: 'Coordenação Voxen',
-    role: 'Moderador',
-    text: 'Bem-vindos ao chat geral. Usem este canal para alinhamentos rápidos e troca de contexto.',
-    timestamp: '09:12',
-  },
-  {
-    id: 2,
-    sender: 'Analista Forense',
-    role: 'Membro',
-    text: 'Sugestão de hoje: cada um publicar o foco da semana em uma frase.',
-    timestamp: '09:19',
-  },
-  {
-    id: 3,
-    sender: 'Unidade de Inteligência',
-    role: 'Membro',
-    text: 'Fechado. Também podemos registrar bloqueios para facilitar apoio do grupo.',
-    timestamp: '09:22',
-  },
-];
+const formatTime = (iso: string) => {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '--:--';
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+};
 
 export default function GeneralChatPage() {
+  const { user } = useUser();
+  const firestore = useFirestore();
   const [activeChannel, setActiveChannel] = useState('Geral');
-  const [messages, setMessages] = useState<LocalMessage[]>(initialMessages);
   const [messageInput, setMessageInput] = useState('');
+
+  const userProfileQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return doc(firestore, 'voxen_v2_users', user.uid);
+  }, [firestore, user?.uid]);
+
+  const { data: userProfile } = useDoc<UserProfile>(userProfileQuery);
+  const senderName = userProfile?.displayName || userProfile?.voxenId || 'Membro Voxen';
+  const senderRole = userProfile?.role === 'tutor' ? 'Tutor' : userProfile?.role === 'admin' ? 'Admin' : 'Discípulo';
+
+  const communityMessagesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'voxen_v2_community_messages'), orderBy('createdAt', 'asc'));
+  }, [firestore]);
+
+  const { data: persistedMessages, isLoading } = useCollection<CommunityMessage>(communityMessagesQuery);
+
+  const messagesByChannel = useMemo(
+    () => (persistedMessages || []).filter((message) => message.channel === activeChannel),
+    [persistedMessages, activeChannel]
+  );
 
   const activeMembers = useMemo(
     () => [
@@ -52,26 +63,22 @@ export default function GeneralChatPage() {
     []
   );
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const normalizedText = messageInput.trim();
-    if (!normalizedText) return;
+    if (!normalizedText || !firestore || !user) return;
 
-    const time = new Intl.DateTimeFormat('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date());
-
-    const nextMessage: LocalMessage = {
-      id: Date.now(),
-      sender: 'Você',
-      role: 'Membro',
+    const newDocRef = doc(collection(firestore, 'voxen_v2_community_messages'));
+    await setDoc(newDocRef, {
+      channel: activeChannel,
+      sender: senderName,
+      role: senderRole,
       text: normalizedText,
-      timestamp: time,
-    };
+      createdAt: new Date().toISOString(),
+      userId: user.uid,
+    });
 
-    setMessages((current) => [...current, nextMessage]);
     setMessageInput('');
   };
 
@@ -116,11 +123,23 @@ export default function GeneralChatPage() {
             </div>
 
             <div className="max-h-[420px] space-y-3 overflow-y-auto px-4 py-4">
-              {messages.map((message) => (
+              {isLoading ? (
+                <div className="border border-primary/15 bg-black/30 p-3 text-xs uppercase tracking-[0.18em] text-primary/65">
+                  Sincronizando mensagens...
+                </div>
+              ) : null}
+
+              {!isLoading && messagesByChannel.length === 0 ? (
+                <div className="border border-primary/15 bg-black/30 p-3 text-sm text-primary/80">
+                  Este canal ainda não tem mensagens. Envie a primeira para iniciar a conversa.
+                </div>
+              ) : null}
+
+              {messagesByChannel.map((message) => (
                 <article key={message.id} className="border border-primary/15 bg-black/30 p-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-black uppercase tracking-wide text-foreground">{message.sender}</p>
-                    <span className="text-[10px] uppercase tracking-[0.18em] text-primary/65">{message.timestamp}</span>
+                    <span className="text-[10px] uppercase tracking-[0.18em] text-primary/65">{formatTime(message.createdAt)}</span>
                   </div>
                   <p className="mt-1 text-xs uppercase tracking-[0.14em] text-primary/70">{message.role}</p>
                   <p className="mt-2 text-sm leading-relaxed text-primary/85">{message.text}</p>

@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
-import { useState, useEffect, useMemo } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, collection, query, orderBy, doc, useStorage } from '@/firebase';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { useUser, useFirestore, useCollection, useMemoFirebase, collection, query, orderBy, doc, useStorage, useDoc, updateDoc } from '@/firebase';
 import { createMessage, deleteMessage, unlockAchievement } from '@/firebase/actions';
 import { MessageForm } from '@/components/message-form';
 import { MessageList } from '@/components/message-list';
 import { useToast } from '@/hooks/use-toast';
+import { UserProfile } from '@/models/types';
 import {
   ArrowUpRight,
   BookOpen,
@@ -55,12 +57,49 @@ export default function HomePage() {
   const firestore = useFirestore();
   const storage = useStorage();
   const { toast } = useToast();
+  const hasMarkedWelcomeRef = useRef(false);
+  const [hasHydrated, setHasHydrated] = useState(false);
+  const [playEntrance, setPlayEntrance] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+  const shouldReduceMotion = hasHydrated && Boolean(prefersReducedMotion);
+  const easeCurve: [number, number, number, number] = [0.22, 1, 0.36, 1];
+  const getEntranceMotion = (delay: number, y = 18) => ({
+    initial: false,
+    animate: playEntrance
+      ? { opacity: 1, y: 0 }
+      : shouldReduceMotion
+        ? { opacity: 0 }
+        : { opacity: 0, y },
+    transition: shouldReduceMotion
+      ? { duration: 0.18, delay }
+      : { duration: 0.7, delay, ease: easeCurve },
+  });
+  const getStaggerMotion = (baseDelay: number, index: number) => ({
+    initial: false,
+    animate: playEntrance
+      ? { opacity: 1, y: 0 }
+      : shouldReduceMotion
+        ? { opacity: 0 }
+        : { opacity: 0, y: 14 },
+    transition: shouldReduceMotion
+      ? { duration: 0.16, delay: baseDelay + index * 0.025 }
+      : { duration: 0.45, delay: baseDelay + index * 0.06, ease: easeCurve },
+  });
   
   const [currentUser, setCurrentUser] = useState<string>('Agente Principal');
 
   useEffect(() => {
     const stored = localStorage.getItem('username');
     if (stored) setCurrentUser(stored);
+    setHasHydrated(true);
+
+    const frame = window.requestAnimationFrame(() => {
+      setPlayEntrance(true);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   const messagesQuery = useMemoFirebase(() => {
@@ -72,6 +111,47 @@ export default function HomePage() {
   }, [firestore]);
 
   const { data: messages, isLoading } = useCollection<Message>(messagesQuery);
+
+  const userProfileQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return doc(firestore, 'voxen_v2_users', user.uid);
+  }, [firestore, user?.uid]);
+
+  const { data: userProfile } = useDoc<UserProfile>(userProfileQuery);
+
+  useEffect(() => {
+    if (userProfile?.displayName) {
+      setCurrentUser(userProfile.displayName);
+      localStorage.setItem('username', userProfile.displayName);
+      return;
+    }
+
+    if (userProfile?.voxenId) {
+      const normalized = userProfile.voxenId.toUpperCase();
+      setCurrentUser(normalized);
+      localStorage.setItem('username', normalized);
+    }
+  }, [userProfile?.displayName, userProfile?.voxenId]);
+
+  useEffect(() => {
+    if (!user || !firestore || !userProfile || hasMarkedWelcomeRef.current || userProfile.onboarding?.hasSeenWelcome) {
+      return;
+    }
+
+    hasMarkedWelcomeRef.current = true;
+    updateDoc(doc(firestore, 'voxen_v2_users', user.uid), {
+      'onboarding.hasSeenWelcome': true,
+    }).catch(() => {
+      hasMarkedWelcomeRef.current = false;
+    });
+  }, [user, firestore, userProfile]);
+
+  const onboarding = userProfile?.onboarding;
+  const onboardingReadGuidelines = Boolean(onboarding?.hasReadGuidelines);
+  const onboardingPostedWord = Boolean(onboarding?.hasPostedFirstDailyPractice);
+  const onboardingCompleted = Boolean(onboarding?.completedAt);
+  const profileRole = userProfile?.role || 'disciple';
+  const profileRoleLabel = profileRole === 'tutor' ? 'Tutor' : profileRole === 'admin' ? 'Admin' : 'Discípulo';
 
   const operationMetrics = useMemo(() => {
     const source = messages || [];
@@ -198,10 +278,18 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(161,138,90,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(161,138,90,0.03)_1px,transparent_1px)] bg-[size:34px_34px]" />
       </div>
 
-      <main className="relative mx-auto w-full max-w-[1400px] px-4 pb-20 pt-10 sm:px-8">
-        <section className="overflow-hidden border border-primary/20 bg-black/35 px-6 py-8 shadow-[0_18px_70px_rgba(0,0,0,0.35)] md:px-10 md:py-10">
+      <motion.main
+        className="relative mx-auto w-full max-w-[1400px] px-4 pb-20 pt-10 sm:px-8"
+        initial={false}
+        animate={playEntrance ? { opacity: 1, y: 0 } : shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
+        transition={shouldReduceMotion ? { duration: 0.2 } : { duration: 0.55, ease: easeCurve }}
+      >
+        <motion.section
+          className="overflow-hidden border border-primary/20 bg-black/35 px-6 py-8 shadow-[0_18px_70px_rgba(0,0,0,0.35)] md:px-10 md:py-10"
+          {...getEntranceMotion(0.08, 20)}
+        >
           <div className="grid gap-8 xl:grid-cols-[1.6fr_1fr] xl:items-end">
-            <div>
+            <motion.div {...getEntranceMotion(0.14, 16)}>
               <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.28em] text-primary">
                 <Sparkles className="h-3.5 w-3.5" /> Painel de Comando
               </div>
@@ -212,25 +300,29 @@ export default function HomePage() {
                 Visualize o pulso da comunidade, navegue pelas trilhas essenciais e registre novos relatórios sem sair do centro de operações.
               </p>
               <div className="mt-7 flex flex-wrap gap-3">
-                {quickActions.map((action) => {
+                {quickActions.map((action, index) => {
                   const Icon = action.icon;
 
                   return (
-                    <Link
-                      key={action.title}
-                      href={action.href}
-                      className="group inline-flex items-center gap-3 border border-primary/30 bg-black/35 px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-primary transition-all hover:border-primary hover:text-foreground"
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span>{action.title}</span>
-                      <ArrowUpRight className="h-4 w-4 opacity-40 transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100" />
-                    </Link>
+                    <motion.div key={action.title} {...getStaggerMotion(0.2, index)}>
+                      <Link
+                        href={action.href}
+                        className="group inline-flex items-center gap-3 border border-primary/30 bg-black/35 px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-primary transition-all hover:border-primary hover:text-foreground"
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span>{action.title}</span>
+                        <ArrowUpRight className="h-4 w-4 opacity-40 transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100" />
+                      </Link>
+                    </motion.div>
                   );
                 })}
               </div>
-            </div>
+            </motion.div>
 
-            <div className="border border-primary/25 bg-[#0a0f18] p-6 shadow-2xl">
+            <motion.div
+              className="border border-primary/25 bg-[#0a0f18] p-6 shadow-2xl"
+              {...getEntranceMotion(0.18, 12)}
+            >
               <div className="flex items-center justify-between border-b border-primary/15 pb-4">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.28em] text-primary/70">Operador Ativo</p>
@@ -264,38 +356,97 @@ export default function HomePage() {
               <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.2em] text-primary/55">
                 Relatórios textuais: {operationMetrics.textOnlyCount}
               </p>
-            </div>
+            </motion.div>
           </div>
-        </section>
+        </motion.section>
 
-        <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          {operationalAreas.map((area) => {
+        {!onboardingCompleted ? (
+          <motion.section
+            className="mt-8 border border-primary/20 bg-black/30 px-6 py-6 shadow-[0_14px_50px_rgba(0,0,0,0.35)]"
+            {...getEntranceMotion(0.22, 14)}
+          >
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/15 pb-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-primary/70">Tutorial de entrada</p>
+                <h2 className="mt-2 text-2xl font-black uppercase tracking-wide text-foreground">Bem-vindo ao Voxen</h2>
+                <p className="mt-2 text-sm text-primary/80">
+                  Nível atual: {profileRoleLabel}. Complete os 2 passos para liberar a aba Conhecimento.
+                </p>
+              </div>
+              <span className="border border-primary/25 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-primary">
+                Progresso: {Number(onboardingReadGuidelines) + Number(onboardingPostedWord)}/2
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="border border-primary/15 bg-black/25 p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary/70">Passo 1</p>
+                <p className="mt-2 text-base font-black uppercase tracking-wide text-foreground">Ler Diretrizes</p>
+                <p className="mt-2 text-sm text-primary/80">Abra as diretrizes e confirme o padrão de convivência da comunidade.</p>
+                <p className="mt-3 text-xs font-black uppercase tracking-[0.14em] text-primary/85">
+                  {onboardingReadGuidelines ? 'Concluído' : 'Pendente'}
+                </p>
+                {!onboardingReadGuidelines ? (
+                  <Link
+                    href="/guidelines"
+                    className="mt-3 inline-flex items-center gap-2 border border-primary/25 bg-primary/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-primary transition-all hover:border-primary hover:text-foreground"
+                  >
+                    Abrir diretrizes
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </Link>
+                ) : null}
+              </div>
+
+              <div className="border border-primary/15 bg-black/25 p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary/70">Passo 2</p>
+                <p className="mt-2 text-base font-black uppercase tracking-wide text-foreground">Primeira palavra</p>
+                <p className="mt-2 text-sm text-primary/80">Envie sua primeira palavra na aba Prática Diária para concluir o tutorial.</p>
+                <p className="mt-3 text-xs font-black uppercase tracking-[0.14em] text-primary/85">
+                  {onboardingPostedWord ? 'Concluído' : 'Pendente'}
+                </p>
+                {!onboardingPostedWord ? (
+                  <Link
+                    href="/lab/daily-practice"
+                    className="mt-3 inline-flex items-center gap-2 border border-primary/25 bg-primary/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-primary transition-all hover:border-primary hover:text-foreground"
+                  >
+                    Ir para prática diária
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+          </motion.section>
+        ) : null}
+
+        <motion.section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5" {...getEntranceMotion(0.28, 18)}>
+          {operationalAreas.map((area, index) => {
             const Icon = area.icon;
 
             return (
-              <Link
-                key={area.title}
-                href={area.href}
-                className="group border border-primary/20 bg-black/30 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-primary/60 hover:bg-black/45"
-              >
-                <div className="flex items-center justify-between">
-                  <Icon className="h-5 w-5 text-primary/80 transition-colors group-hover:text-primary" />
-                  <span className="border border-primary/25 bg-primary/10 px-2 py-1 text-[8px] font-black uppercase tracking-[0.18em] text-primary/80">
-                    {area.badge}
-                  </span>
-                </div>
-                <h2 className="mt-5 text-xl font-black uppercase tracking-wide text-foreground">{area.title}</h2>
-                <p className="mt-2 text-sm leading-relaxed text-primary/80">{area.description}</p>
-                <div className="mt-5 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-primary transition-colors group-hover:text-foreground">
-                  Abrir área
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                </div>
-              </Link>
+              <motion.div key={area.title} {...getStaggerMotion(0.32, index)}>
+                <Link
+                  href={area.href}
+                  className="group block border border-primary/20 bg-black/30 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-primary/60 hover:bg-black/45"
+                >
+                  <div className="flex items-center justify-between">
+                    <Icon className="h-5 w-5 text-primary/80 transition-colors group-hover:text-primary" />
+                    <span className="border border-primary/25 bg-primary/10 px-2 py-1 text-[8px] font-black uppercase tracking-[0.18em] text-primary/80">
+                      {area.badge}
+                    </span>
+                  </div>
+                  <h2 className="mt-5 text-xl font-black uppercase tracking-wide text-foreground">{area.title}</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-primary/80">{area.description}</p>
+                  <div className="mt-5 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-primary transition-colors group-hover:text-foreground">
+                    Abrir área
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </div>
+                </Link>
+              </motion.div>
             );
           })}
-        </section>
+        </motion.section>
 
-        <section className="mt-10">
+        <motion.section className="mt-10" {...getEntranceMotion(0.46, 16)}>
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-primary/15 pb-4">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/70">Comando Rápido</p>
@@ -309,9 +460,12 @@ export default function HomePage() {
           <div className="sticky top-6 z-30">
             <MessageForm onNewMessage={handleNewMessage} currentUser={currentUser} onUserChange={setCurrentUser} />
           </div>
-        </section>
+        </motion.section>
 
-        <section className="mt-10 border border-primary/15 bg-black/20 px-2 py-6 sm:px-5">
+        <motion.section
+          className="mt-10 border border-primary/15 bg-black/20 px-2 py-6 sm:px-5"
+          {...getEntranceMotion(0.58, 16)}
+        >
           <div className="mb-6 flex items-center justify-between px-4">
             <div>
               <h3 className="text-2xl font-black uppercase tracking-wide text-foreground">Fluxo de Relatórios</h3>
@@ -334,8 +488,8 @@ export default function HomePage() {
               />
             )}
           </div>
-        </section>
-      </main>
+        </motion.section>
+      </motion.main>
     </div>
   );
 }

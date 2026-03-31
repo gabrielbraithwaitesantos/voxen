@@ -33,7 +33,7 @@ export default function SplashEntryPage() {
       <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(3,8,20,0.1),rgba(3,8,20,0.72))]" />
 
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center">
-        <Link href="/login" aria-label="Entrar no login Voxen">
+        <Link href="/voxen-id" aria-label="Criar Voxen ID e entrar na plataforma">
           <motion.div
             className="group relative flex h-44 w-44 cursor-pointer items-center justify-center rounded-full sm:h-52 sm:w-52 md:h-60 md:w-60"
             initial={{ opacity: 0, y: 20, scale: 0.76, rotate: -7 }}
@@ -89,7 +89,7 @@ export default function SplashEntryPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.78, ease: [0.22, 1, 0.36, 1] }}
         >
-          Toque na insígnia para iniciar
+          Toque na insígnia para criar seu Voxen ID
         </motion.p>
       </div>
     </motion.main>

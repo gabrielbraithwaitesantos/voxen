@@ -1,19 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useDoc, useFirestore, useMemoFirebase, useUser, doc } from '@/firebase';
+import { toast } from '@/hooks/use-toast';
 import type { LucideIcon } from 'lucide-react';
 import { 
     Home, MessageSquare, BookOpen, UserCircle, Users, Lightbulb, Award, 
     Scale, Cpu, Globe, Shield, School, LineChart, Pencil, HelpCircle, Voicemail, 
     PenTool, MessageCircle as MessageCircleIcon, Clipboard, Calendar, Video, UserPlus, 
-    LogOut, Menu, X, PanelLeftClose
+    LogOut, Menu, X, PanelLeftClose, Lock, ArrowRight
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { UserProfile } from '@/models/types';
 
 interface AppLayoutProps {
     children: React.ReactNode;
@@ -104,11 +107,56 @@ const navSections: NavSection[] = [
     },
 ];
 
+const mobileQuickNav: Array<{ name: string; href: Route; icon: LucideIcon }> = [
+    { name: 'Início', href: '/home', icon: Home },
+    { name: 'Comunidade', href: '/community', icon: Users },
+    { name: 'Conhecimento', href: '/knowledge', icon: BookOpen },
+    { name: 'Meu ID', href: '/profile', icon: UserCircle },
+];
+
 export function AppLayout({ children, onLogout }: AppLayoutProps) {
     const [isSidebarOpen, setSidebarOpen] = useState(false);
     const [isDesktopCollapsed, setDesktopCollapsed] = useState(false);
     const [username, setUsername] = useState('');
+    const [hasHydrated, setHasHydrated] = useState(false);
+    const { user } = useUser();
+    const firestore = useFirestore();
     const pathname = usePathname();
+    const router = useRouter();
+    const prefersReducedMotion = useReducedMotion();
+    const shouldReduceMotion = !hasHydrated || Boolean(prefersReducedMotion);
+    const mainScrollRef = useRef<HTMLDivElement | null>(null);
+    const isFirstPathRenderRef = useRef(true);
+
+    const userProfileQuery = useMemoFirebase(() => {
+        if (!firestore || !user?.uid) return null;
+        return doc(firestore, 'voxen_v2_users', user.uid);
+    }, [firestore, user?.uid]);
+
+    const { data: userProfile } = useDoc<UserProfile>(userProfileQuery);
+
+    const role = userProfile?.role || 'disciple';
+    const hasAccessModel = Boolean(userProfile?.access || userProfile?.onboarding);
+    const canAccessKnowledge = hasAccessModel
+        ? Boolean(userProfile?.access?.knowledgeUnlocked || userProfile?.onboarding?.completedAt)
+        : true;
+    const canAccessLab = hasAccessModel ? (userProfile?.access?.labUnlocked ?? true) : true;
+    const canAccessElite = hasAccessModel
+        ? Boolean(userProfile?.access?.eliteUnlocked || role === 'tutor' || role === 'admin')
+        : role === 'tutor' || role === 'admin';
+    const onboardingReadGuidelines = Boolean(userProfile?.onboarding?.hasReadGuidelines);
+    const onboardingPostedWord = Boolean(userProfile?.onboarding?.hasPostedFirstDailyPractice);
+    const onboardingCompleted = Boolean(userProfile?.onboarding?.completedAt);
+    const onboardingProgress = Number(onboardingReadGuidelines) + Number(onboardingPostedWord);
+    const showOnboardingBanner = hasAccessModel && !onboardingCompleted;
+
+    const notifyLockedArea = () => {
+        toast({
+            title: 'Área bloqueada no momento',
+            description: 'Complete Diretrizes + Primeira Palavra para liberar novas trilhas.',
+        });
+        router.push('/home');
+    };
 
     useEffect(() => {
         const storedUsername = localStorage.getItem('username');
@@ -121,7 +169,36 @@ export function AppLayout({ children, onLogout }: AppLayoutProps) {
         if (storedSidebarState === '1') {
             setDesktopCollapsed(true);
         }
+
+        setHasHydrated(true);
     }, []);
+
+    useEffect(() => {
+        if (userProfile?.displayName) {
+            setUsername(userProfile.displayName);
+            localStorage.setItem('username', userProfile.displayName);
+            return;
+        }
+
+        if (userProfile?.voxenId) {
+            const formatted = userProfile.voxenId.toUpperCase();
+            setUsername(formatted);
+            localStorage.setItem('username', formatted);
+        }
+    }, [userProfile?.displayName, userProfile?.voxenId]);
+
+    useEffect(() => {
+        if (isFirstPathRenderRef.current) {
+            isFirstPathRenderRef.current = false;
+            return;
+        }
+
+        mainScrollRef.current?.scrollTo({
+            top: 0,
+            left: 0,
+            behavior: shouldReduceMotion ? 'auto' : 'smooth',
+        });
+    }, [pathname, shouldReduceMotion]);
 
     const handleDesktopSidebarToggle = () => {
         setDesktopCollapsed((prev) => {
@@ -133,7 +210,7 @@ export function AppLayout({ children, onLogout }: AppLayoutProps) {
 
     const desktopSidebarWidth = isDesktopCollapsed ? 84 : 280;
 
-    const SidebarContent = ({ collapsed = false, mobile = false }: { collapsed?: boolean; mobile?: boolean }) => (
+    const renderSidebarContent = ({ collapsed = false, mobile = false }: { collapsed?: boolean; mobile?: boolean }) => (
         <div className="flex flex-col h-full bg-[#0C101A] text-gray-300 border-r border-primary/10">
             <div className={cn("border-b border-primary/10", collapsed ? "px-2 py-4" : "px-4 py-5")}>
                 <AnimatePresence mode="wait" initial={false}>
@@ -224,19 +301,36 @@ export function AppLayout({ children, onLogout }: AppLayoutProps) {
                         <div className="space-y-1.5">
                             {section.items.map(item => {
                                 const isActive = pathname === item.href;
+                                const isLocked =
+                                    (item.href.startsWith('/knowledge') && !canAccessKnowledge) ||
+                                    (item.href.startsWith('/lab') && !canAccessLab) ||
+                                    (item.href.startsWith('/elite') && !canAccessElite);
                                 return (
                                 <Link
                                     key={item.name}
                                     href={item.href}
-                                    onClick={() => {
+                                    onClick={(event) => {
+                                        if (isLocked) {
+                                            event.preventDefault();
+                                            notifyLockedArea();
+                                            return;
+                                        }
+
                                         if (mobile) {
                                             setSidebarOpen(false);
                                         }
                                     }}
-                                    title={collapsed ? item.name : undefined}
+                                    title={
+                                        isLocked
+                                            ? 'Área bloqueada: complete Diretrizes e Primeira Palavra'
+                                            : collapsed
+                                                ? item.name
+                                                : undefined
+                                    }
                                     className={cn(
                                         "flex items-center py-2.5 text-xs font-bold uppercase tracking-wider rounded-none transition-all duration-300",
                                         collapsed ? "justify-center px-0" : "px-4",
+                                        isLocked && "cursor-not-allowed opacity-40 hover:bg-transparent hover:text-gray-500",
                                         isActive 
                                             ? collapsed ? "bg-primary/10 text-primary border-l-2 border-primary" : "bg-primary/10 text-primary border-r-2 border-primary"
                                             : "text-gray-500 hover:bg-white/5 hover:text-white"
@@ -255,6 +349,7 @@ export function AppLayout({ children, onLogout }: AppLayoutProps) {
                                     >
                                         {item.name}
                                     </motion.span>
+                                    {!collapsed && isLocked ? <Lock className="ml-auto h-3.5 w-3.5 text-primary/45" /> : null}
                                 </Link>
                                 );
                             })}
@@ -310,11 +405,53 @@ export function AppLayout({ children, onLogout }: AppLayoutProps) {
     );
 
     return (
-        <div className="flex h-screen bg-[#05080c]">
-            <div className="md:hidden fixed top-6 left-6 z-50">
-                 <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-3 bg-black/80 backdrop-blur-xl border border-primary/20 text-primary shadow-2xl">
-                    {isSidebarOpen ? <X size={24}/> : <Menu size={24} />}
-                </button>
+        <div className="flex min-h-dvh h-dvh bg-[#05080c]">
+            <div className="md:hidden fixed inset-x-0 bottom-0 z-20 border-t border-primary/20 bg-[#080d15]/95 backdrop-blur-xl">
+                <div className="grid grid-cols-5 px-1 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
+                    {mobileQuickNav.map((item) => {
+                        const isActive = pathname === item.href;
+                        const isLocked = item.href.startsWith('/knowledge') && !canAccessKnowledge;
+
+                        return (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                onClick={(event) => {
+                                    if (isLocked) {
+                                        event.preventDefault();
+                                        notifyLockedArea();
+                                    }
+                                }}
+                                className={cn(
+                                    'flex flex-col items-center justify-center gap-1 rounded-md py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-200',
+                                    isLocked && 'cursor-not-allowed opacity-40 hover:bg-transparent hover:text-gray-400',
+                                    isActive
+                                        ? 'bg-primary/12 text-primary'
+                                        : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                )}
+                            >
+                                <item.icon className="h-4 w-4" />
+                                <span>{item.name}</span>
+                            </Link>
+                        );
+                    })}
+
+                    <button
+                        type="button"
+                        onClick={() => setSidebarOpen((prev) => !prev)}
+                        className={cn(
+                            'flex flex-col items-center justify-center gap-1 rounded-md py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-200',
+                            isSidebarOpen
+                                ? 'bg-primary/14 text-primary'
+                                : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                        )}
+                        aria-label="Abrir menu completo"
+                        title="Abrir menu"
+                    >
+                        {isSidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+                        <span>Menu</span>
+                    </button>
+                </div>
             </div>
 
             <AnimatePresence>
@@ -335,7 +472,7 @@ export function AppLayout({ children, onLogout }: AppLayoutProps) {
                         transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                         className="fixed inset-y-0 left-0 z-40 w-[74vw] max-w-[17.5rem] md:hidden"
                     >
-                        <SidebarContent mobile />
+                        {renderSidebarContent({ mobile: true })}
                     </motion.div>
                 </>
             )}
@@ -343,18 +480,80 @@ export function AppLayout({ children, onLogout }: AppLayoutProps) {
 
             <motion.aside
                 className="hidden md:flex md:flex-shrink-0 overflow-hidden"
-                initial={false}
-                animate={{ width: desktopSidebarWidth }}
-                transition={{ duration: 0.34, ease: [0.16, 1, 0.3, 1] }}
+                initial={{ opacity: 0, x: -18, width: desktopSidebarWidth }}
+                animate={{ opacity: 1, x: 0, width: desktopSidebarWidth }}
+                transition={{ duration: 0.36, ease: [0.16, 1, 0.3, 1] }}
             >
                 <div className="flex flex-col w-full">
-                    <SidebarContent collapsed={isDesktopCollapsed} />
+                    {renderSidebarContent({ collapsed: isDesktopCollapsed })}
                 </div>
             </motion.aside>
 
             <main className="flex-1 flex flex-col overflow-hidden relative">
-                <div className="flex-1 overflow-y-auto bg-[#05080c] scroll-smooth">
-                    {children}
+                <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[2px] overflow-hidden">
+                    <motion.div
+                        key={`route-glint-${pathname}`}
+                        className="h-full bg-gradient-to-r from-transparent via-primary/70 to-transparent"
+                        initial={shouldReduceMotion ? { opacity: 0 } : { x: '-100%', opacity: 0.6 }}
+                        animate={shouldReduceMotion ? { opacity: 0 } : { x: '100%', opacity: 0 }}
+                        transition={
+                            shouldReduceMotion
+                                ? { duration: 0.01 }
+                                : { duration: 0.55, ease: [0.22, 1, 0.36, 1] }
+                        }
+                    />
+                </div>
+
+                <div ref={mainScrollRef} className="flex-1 overflow-y-auto bg-[#05080c] scroll-smooth pb-24 md:pb-0">
+                    {showOnboardingBanner ? (
+                        <div className="sticky top-0 z-20 border-b border-primary/25 bg-[#101726]/95 px-4 py-3 backdrop-blur-xl md:px-7">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">Acesso progressivo ativo</p>
+                                    <p className="mt-1 text-sm text-primary/90">
+                                        Algumas áreas aparecem bloqueadas para novos perfis. Progresso do tutorial inicial: {onboardingProgress}/2.
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {!onboardingReadGuidelines ? (
+                                        <Link
+                                            href="/guidelines"
+                                            className="inline-flex items-center gap-2 border border-primary/30 bg-primary/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-primary transition-all hover:border-primary hover:text-white"
+                                        >
+                                            Ler diretrizes
+                                            <ArrowRight className="h-3.5 w-3.5" />
+                                        </Link>
+                                    ) : null}
+
+                                    {!onboardingPostedWord ? (
+                                        <Link
+                                            href="/lab/daily-practice"
+                                            className="inline-flex items-center gap-2 border border-primary/30 bg-primary/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-primary transition-all hover:border-primary hover:text-white"
+                                        >
+                                            Enviar 1a palavra
+                                            <ArrowRight className="h-3.5 w-3.5" />
+                                        </Link>
+                                    ) : null}
+                                </div>
+                            </div>
+                        </div>
+                    ) : null}
+
+                    <motion.div
+                        key={pathname}
+                        className="min-h-full origin-top transform-gpu"
+                        style={{ willChange: 'opacity, transform' }}
+                        initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 12, scale: 0.995 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={
+                            shouldReduceMotion
+                                ? { duration: 0.01 }
+                                : { duration: 0.26, ease: [0.22, 1, 0.36, 1] }
+                        }
+                    >
+                        {children}
+                    </motion.div>
                 </div>
             </main>
         </div>

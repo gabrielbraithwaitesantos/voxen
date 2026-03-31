@@ -1,5 +1,10 @@
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useRef } from 'react';
 import { AlertCircle, ArrowUpRight, BookOpen, Shield, Users } from 'lucide-react';
+import { useDoc, useFirestore, useMemoFirebase, useUser, doc, updateDoc } from '@/firebase';
+import { UserProfile } from '@/models/types';
 
 const principles = [
   {
@@ -41,6 +46,30 @@ const moderationFlow = [
 ];
 
 export default function GuidelinesPage() {
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const hasUpdatedRef = useRef(false);
+
+  const userProfileQuery = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return doc(firestore, 'voxen_v2_users', user.uid);
+  }, [firestore, user?.uid]);
+
+  const { data: userProfile } = useDoc<UserProfile>(userProfileQuery);
+
+  useEffect(() => {
+    if (!user || !firestore || !userProfile || hasUpdatedRef.current || userProfile.onboarding?.hasReadGuidelines) {
+      return;
+    }
+
+    hasUpdatedRef.current = true;
+    updateDoc(doc(firestore, 'voxen_v2_users', user.uid), {
+      'onboarding.hasReadGuidelines': true,
+    }).catch(() => {
+      hasUpdatedRef.current = false;
+    });
+  }, [user, firestore, userProfile]);
+
   return (
     <div className="relative min-h-full bg-[#05080c] px-4 pb-16 pt-10 sm:px-8">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
