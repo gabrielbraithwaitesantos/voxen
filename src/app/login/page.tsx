@@ -72,14 +72,14 @@ export default function LoginPage() {
       className={`relative min-h-screen overflow-hidden px-4 py-6 text-[#e9dcc2] transition-opacity duration-500 sm:px-6 md:px-10 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
       style={{
         background:
-          'radial-gradient(circle at 18% 14%, rgba(44, 81, 145, 0.45) 0%, rgba(8, 21, 49, 0.92) 38%, rgba(4, 10, 24, 1) 100%)',
+          'radial-gradient(circle at 50% 10%, rgba(44, 81, 145, 0.4) 0%, rgba(8, 21, 49, 0.92) 40%, rgba(4, 10, 24, 1) 100%)',
       }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.7 }}
     >
-      <div className="pointer-events-none absolute -left-16 top-8 h-72 w-72 rounded-full bg-[#f2d592]/10 blur-3xl" />
-      <div className="pointer-events-none absolute -right-20 bottom-4 h-80 w-80 rounded-full bg-[#7ba8df]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -left-14 top-10 h-72 w-72 rounded-full bg-[#f2d592]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-14 top-12 h-72 w-72 rounded-full bg-[#7ba8df]/10 blur-3xl" />
 
       <motion.div
         className="pointer-events-none absolute inset-0 opacity-25"
@@ -100,9 +100,9 @@ export default function LoginPage() {
           transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
         >
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#e3c481]/50 to-transparent" />
-          <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="grid lg:grid-cols-[1fr_1fr]">
             <motion.section
-              className="relative border-b border-[#e3c481]/15 px-6 py-8 sm:px-10 sm:py-10 lg:border-b-0 lg:border-r lg:px-12 lg:py-12"
+              className="relative flex h-full flex-col justify-center border-b border-[#e3c481]/15 px-6 py-8 sm:px-10 sm:py-10 lg:border-b-0 lg:border-r lg:px-12 lg:py-12"
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.75, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
@@ -112,11 +112,11 @@ export default function LoginPage() {
                 Acesso institucional
               </div>
 
-              <div className="mt-8 flex items-center gap-4">
+              <div className="mt-8 flex items-center gap-5">
                 <motion.img
-                  src="/voxen-logo.png"
+                  src="/voxen-logo-clean.png"
                   alt="Voxen"
-                  className="h-14 w-14 rounded-xl border border-[#e3c481]/20 bg-[#0d1a33]/90 p-2.5 object-contain"
+                  className="h-24 w-24 rounded-2xl border border-[#e3c481]/28 bg-[#0d1a33]/90 p-1.5 object-contain shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
                   animate={{ y: [0, -2, 0], scale: [1, 1.02, 1] }}
                   transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
                 />
@@ -148,7 +148,7 @@ export default function LoginPage() {
             </motion.section>
 
             <motion.section
-              className="px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12"
+              className="flex h-full flex-col justify-center px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12"
               initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.75, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
