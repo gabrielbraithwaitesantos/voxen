@@ -69,149 +69,170 @@ export default function LoginPage() {
 
   return (
     <motion.main
-      className={`relative min-h-screen overflow-hidden px-5 py-8 text-[#e9dcc2] transition-opacity duration-500 md:px-10 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
+      className={`relative min-h-screen overflow-hidden px-4 py-6 text-[#e9dcc2] transition-opacity duration-500 sm:px-6 md:px-10 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
       style={{
         background:
-          'radial-gradient(circle at center, rgba(16, 44, 94, 0.62) 0%, rgba(5, 17, 43, 0.95) 46%, rgba(3, 9, 25, 1) 100%)',
+          'radial-gradient(circle at 18% 14%, rgba(44, 81, 145, 0.45) 0%, rgba(8, 21, 49, 0.92) 38%, rgba(4, 10, 24, 1) 100%)',
       }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.7 }}
     >
-      <div className="pointer-events-none absolute -left-16 top-10 h-64 w-64 rounded-full bg-[#f3d98f]/10 blur-3xl" />
-      <div className="pointer-events-none absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-[#80b9ff]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -left-16 top-8 h-72 w-72 rounded-full bg-[#f2d592]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-20 bottom-4 h-80 w-80 rounded-full bg-[#7ba8df]/10 blur-3xl" />
 
       <motion.div
-        className="pointer-events-none absolute inset-0 opacity-35"
+        className="pointer-events-none absolute inset-0 opacity-25"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(233, 220, 194, 0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(233, 220, 194, 0.06) 1px, transparent 1px)',
-          backgroundSize: '42px 42px',
+            'linear-gradient(rgba(233, 220, 194, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(233, 220, 194, 0.05) 1px, transparent 1px)',
+          backgroundSize: '46px 46px',
         }}
-        animate={{ opacity: [0.22, 0.38, 0.24] }}
-        transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
+        animate={{ opacity: [0.2, 0.32, 0.22] }}
+        transition={{ duration: 4.4, repeat: Infinity, ease: 'easeInOut' }}
       />
 
-      <div className="mx-auto grid min-h-[92vh] w-full max-w-7xl grid-cols-1 gap-6 md:grid-cols-3">
-        <motion.aside
-          className="rounded-3xl border border-[#e3c481]/15 bg-[#0b1428]/55 px-8 py-10 backdrop-blur-md"
-          initial={{ opacity: 0, x: -24 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <div className="mb-14 flex justify-center md:justify-start">
-            <motion.img
-              src="/voxen-logo.png"
-              alt="Voxen"
-              className="h-16 w-16 object-contain"
-              animate={{ y: [0, -2, 0], scale: [1, 1.03, 1] }}
-              transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-            />
-          </div>
-          <h2 className="text-center text-2xl font-black uppercase tracking-wide md:text-left md:text-3xl">Voxen ID</h2>
-          <p className="mt-10 text-xl leading-relaxed text-[#efe3c8]/85 md:text-2xl">
-            • Integra suas informações e atividade para uma experiência no ecossistema Voxen fluida e conectada.
-          </p>
-        </motion.aside>
-
-        <motion.section
-          className="rounded-3xl border border-[#e3c481]/15 bg-[#0b1428]/45 px-6 py-8 backdrop-blur-md md:px-8"
+      <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center justify-center">
+        <motion.div
+          className="relative w-full overflow-hidden rounded-[30px] border border-[#e3c481]/20 bg-[#081225]/76 shadow-[0_28px_120px_rgba(0,0,0,0.5)] backdrop-blur-xl"
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.75, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div className="mb-8 flex items-start justify-center gap-2 text-center text-[11px] uppercase tracking-[0.2em] text-[#efdba8]/85 md:text-sm md:tracking-[0.22em]">
-            <Info className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>Não tem Voxen ID? Crie agora na página oficial de entrada.</p>
-          </div>
-
-          <div className="mx-auto mt-8 max-w-md rounded-2xl border border-[#e3c481]/15 bg-[#101a31]/70 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.35)] md:p-8">
-            <p className="mb-3 text-center text-[10px] uppercase tracking-[0.3em] text-[#e9dcc2]/55">Acesso seguro</p>
-            <h1 className="mb-8 text-center text-3xl font-black uppercase tracking-wide md:text-4xl">Apresente-se aqui:</h1>
-
-            <form onSubmit={handleLogin} className="space-y-8">
-              <div>
-                <label className="text-sm uppercase tracking-[0.28em] text-[#e9dcc2]/70">ID</label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                  autoComplete="username"
-                  placeholder="Digite seu Voxen ID (ex: gabriel.santos)"
-                  className="mt-2 w-full rounded-xl border border-[#e3c481]/35 bg-[#0a1326]/75 px-4 py-3 text-lg outline-none transition focus:border-[#f3d98f] focus:ring-2 focus:ring-[#f3d98f]/20"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm uppercase tracking-[0.28em] text-[#e9dcc2]/70">Senha</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                  placeholder="Digite sua senha"
-                  className="mt-2 w-full rounded-xl border border-[#e3c481]/35 bg-[#0a1326]/75 px-4 py-3 text-lg outline-none transition focus:border-[#f3d98f] focus:ring-2 focus:ring-[#f3d98f]/20"
-                />
-              </div>
-
-              <motion.button
-                type="submit"
-                disabled={!canSubmit || isSubmitting}
-                className={`group mt-2 flex w-full cursor-pointer items-center justify-center gap-3 rounded-xl border px-5 py-3.5 text-base font-black uppercase tracking-[0.16em] transition ${
-                  canSubmit && !isSubmitting
-                    ? 'border-[#e3c481]/75 bg-[#e3c481]/10 text-[#f4e5be] hover:bg-[#e3c481]/22'
-                    : 'cursor-not-allowed border-[#e3c481]/25 bg-[#0f1a30]/70 text-[#e9dcc2]/45'
-                }`}
-                aria-label="Avançar"
-                whileHover={canSubmit && !isSubmitting ? { scale: 1.02, y: -1 } : {}}
-                whileTap={canSubmit && !isSubmitting ? { scale: 0.98 } : {}}
-              >
-                {isSubmitting ? 'Autenticando...' : 'Entrar na plataforma'}
-                <ArrowRight className="h-5 w-5 transition group-hover:translate-x-0.5" />
-              </motion.button>
-
-              {errorMessage ? (
-                <p className="inline-flex items-center gap-2 text-xs text-red-300">
-                  <AlertCircle className="h-4 w-4" />
-                  {errorMessage}
-                </p>
-              ) : null}
-
-              <div className="pt-1 text-center text-xs text-[#e9dcc2]/70">
-                Primeiro acesso?{' '}
-                <Link href="/voxen-id" className="font-bold uppercase tracking-[0.12em] text-[#f2dca8] hover:text-white">
-                  Criar Voxen ID
-                </Link>
-              </div>
-            </form>
-          </div>
-        </motion.section>
-
-        <motion.aside
-          className="rounded-3xl border border-[#e3c481]/15 bg-[#0b1428]/55 px-8 py-10 backdrop-blur-md"
-          initial={{ opacity: 0, x: 24 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <div className="mb-14 flex justify-center md:justify-end">
-            <motion.div
-              animate={{ y: [0, -2, 0], rotate: [0, 1.2, 0] }}
-              transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#e3c481]/50 to-transparent" />
+          <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
+            <motion.section
+              className="relative border-b border-[#e3c481]/15 px-6 py-8 sm:px-10 sm:py-10 lg:border-b-0 lg:border-r lg:px-12 lg:py-12"
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.75, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
             >
-              <CircleUserRound className="h-16 w-16" />
-            </motion.div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#e3c481]/30 bg-[#e3c481]/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#f1ddb0]">
+                <Shield className="h-3.5 w-3.5" />
+                Acesso institucional
+              </div>
+
+              <div className="mt-8 flex items-center gap-4">
+                <motion.img
+                  src="/voxen-logo.png"
+                  alt="Voxen"
+                  className="h-14 w-14 rounded-xl border border-[#e3c481]/20 bg-[#0d1a33]/90 p-2.5 object-contain"
+                  animate={{ y: [0, -2, 0], scale: [1, 1.02, 1] }}
+                  transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                />
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-[#e9dcc2]/65">Voxen Platform</p>
+                  <h1 className="mt-1 text-3xl font-black uppercase tracking-[0.06em] text-[#f5e7c4] sm:text-4xl">Login seguro</h1>
+                </div>
+              </div>
+
+              <p className="mt-8 max-w-xl text-base leading-relaxed text-[#efe3c8]/82 sm:text-lg">
+                Acesse sua conta com o Voxen ID para continuar seu progresso, sua trilha de conhecimento e suas conexões na plataforma.
+              </p>
+
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+                <div className="rounded-2xl border border-[#e3c481]/18 bg-[#0f1a33]/60 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#efd9a6]/85">Identidade única</p>
+                  <p className="mt-2 text-sm leading-relaxed text-[#e9dcc2]/75">Seu Voxen ID conecta perfil, histórico e presença em todo o ecossistema.</p>
+                </div>
+                <div className="rounded-2xl border border-[#e3c481]/18 bg-[#0f1a33]/60 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#efd9a6]/85">Proteção contínua</p>
+                  <p className="mt-2 text-sm leading-relaxed text-[#e9dcc2]/75">Camada de autenticação reforçada para manter seus dados e seu acesso protegidos.</p>
+                </div>
+              </div>
+
+              <div className="mt-8 flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-[#e9dcc2]/60">
+                <CircleUserRound className="h-4 w-4" />
+                Fluxo autenticado por Voxen ID + senha
+              </div>
+            </motion.section>
+
+            <motion.section
+              className="px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12"
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.75, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <div className="mb-8 rounded-2xl border border-[#e3c481]/20 bg-[#101b33]/65 p-4 text-sm leading-relaxed text-[#e9dcc2]/80">
+                <p className="inline-flex items-start gap-2">
+                  <Info className="mt-[2px] h-4 w-4 shrink-0 text-[#f0dba8]" />
+                  Não tem Voxen ID?{' '}
+                  <Link href="/voxen-id" className="font-semibold uppercase tracking-[0.1em] text-[#f1dca8] transition hover:text-white">
+                    Criar agora
+                  </Link>
+                </p>
+              </div>
+
+              <p className="text-[10px] uppercase tracking-[0.3em] text-[#e9dcc2]/55">Painel de acesso</p>
+              <h2 className="mt-2 text-3xl font-black uppercase tracking-[0.08em] text-[#f5e7c4] sm:text-[2.2rem]">Entrar na plataforma</h2>
+              <p className="mt-3 text-sm leading-relaxed text-[#e9dcc2]/72 sm:text-base">Use seu Voxen ID e sua senha para iniciar a sessão.</p>
+
+              <form onSubmit={handleLogin} className="mt-8 space-y-6">
+                <div>
+                  <label htmlFor="voxen-id" className="text-xs font-semibold uppercase tracking-[0.22em] text-[#e9dcc2]/68">
+                    Voxen ID
+                  </label>
+                  <input
+                    id="voxen-id"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                    autoComplete="username"
+                    placeholder="ex: gabriel.santos"
+                    className="mt-2 w-full rounded-xl border border-[#e3c481]/32 bg-[#0a1326]/86 px-4 py-3 text-base outline-none transition focus:border-[#f3d98f] focus:ring-2 focus:ring-[#f3d98f]/20"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="voxen-password" className="text-xs font-semibold uppercase tracking-[0.22em] text-[#e9dcc2]/68">
+                    Senha
+                  </label>
+                  <input
+                    id="voxen-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    placeholder="Digite sua senha"
+                    className="mt-2 w-full rounded-xl border border-[#e3c481]/32 bg-[#0a1326]/86 px-4 py-3 text-base outline-none transition focus:border-[#f3d98f] focus:ring-2 focus:ring-[#f3d98f]/20"
+                  />
+                </div>
+
+                <motion.button
+                  type="submit"
+                  disabled={!canSubmit || isSubmitting}
+                  className={`group mt-2 flex w-full items-center justify-center gap-3 rounded-xl border px-5 py-3.5 text-sm font-black uppercase tracking-[0.16em] transition-all ${
+                    canSubmit && !isSubmitting
+                      ? 'border-[#e3c481]/80 bg-gradient-to-r from-[#b4934e] via-[#e0c07a] to-[#b58d44] text-[#101624] shadow-[0_12px_26px_rgba(227,196,129,0.25)] hover:brightness-105'
+                      : 'cursor-not-allowed border-[#e3c481]/25 bg-[#0f1a30]/70 text-[#e9dcc2]/45'
+                  }`}
+                  aria-label="Entrar"
+                  whileHover={canSubmit && !isSubmitting ? { scale: 1.015, y: -1 } : {}}
+                  whileTap={canSubmit && !isSubmitting ? { scale: 0.99 } : {}}
+                >
+                  {isSubmitting ? 'Autenticando...' : 'Entrar na plataforma'}
+                    <ArrowRight className="h-5 w-5 transition group-hover:translate-x-0.5" />
+                </motion.button>
+
+                {errorMessage ? (
+                  <p className="inline-flex items-center gap-2 text-xs text-red-300">
+                    <AlertCircle className="h-4 w-4" />
+                    {errorMessage}
+                  </p>
+                ) : null}
+
+                <div className="pt-2 text-center text-xs text-[#e9dcc2]/65">
+                  Primeiro acesso?{' '}
+                  <Link href="/voxen-id" className="font-bold uppercase tracking-[0.12em] text-[#f2dca8] hover:text-white">
+                    Criar Voxen ID
+                  </Link>
+                </div>
+              </form>
+            </motion.section>
           </div>
-          <h2 className="text-center text-2xl font-black uppercase tracking-wide md:text-right md:text-3xl">Perfil / Senha</h2>
-          <p className="mt-10 text-xl leading-relaxed text-[#efe3c8]/85 md:text-2xl">
-            • Criando sua senha terá segurança dobrada no seu login e presença na plataforma Voxen.
-          </p>
-          <div className="mt-10 flex items-center justify-center gap-2 text-xs uppercase tracking-[0.2em] text-[#e9dcc2]/65 md:justify-end">
-            <Shield className="h-4 w-4" />
-            Criptografia ativa
-          </div>
-        </motion.aside>
+        </motion.div>
       </div>
     </motion.main>
   );
