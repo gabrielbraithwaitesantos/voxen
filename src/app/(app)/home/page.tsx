@@ -2,14 +2,13 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { useUser, useFirestore, useCollection, useMemoFirebase, collection, query, orderBy, doc, useStorage, useDoc, updateDoc } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, collection, query, orderBy, doc, useStorage } from '@/firebase';
 import { createMessage, deleteMessage, unlockAchievement } from '@/firebase/actions';
 import { MessageForm } from '@/components/message-form';
 import { MessageList } from '@/components/message-list';
 import { useToast } from '@/hooks/use-toast';
-import { UserProfile } from '@/models/types';
 import {
   ArrowUpRight,
   BookOpen,
@@ -57,7 +56,6 @@ export default function HomePage() {
   const firestore = useFirestore();
   const storage = useStorage();
   const { toast } = useToast();
-  const hasMarkedWelcomeRef = useRef(false);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [playEntrance, setPlayEntrance] = useState(false);
   const prefersReducedMotion = useReducedMotion();
@@ -111,47 +109,6 @@ export default function HomePage() {
   }, [firestore]);
 
   const { data: messages, isLoading } = useCollection<Message>(messagesQuery);
-
-  const userProfileQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
-    return doc(firestore, 'voxen_v2_users', user.uid);
-  }, [firestore, user?.uid]);
-
-  const { data: userProfile } = useDoc<UserProfile>(userProfileQuery);
-
-  useEffect(() => {
-    if (userProfile?.displayName) {
-      setCurrentUser(userProfile.displayName);
-      localStorage.setItem('username', userProfile.displayName);
-      return;
-    }
-
-    if (userProfile?.voxenId) {
-      const normalized = userProfile.voxenId.toUpperCase();
-      setCurrentUser(normalized);
-      localStorage.setItem('username', normalized);
-    }
-  }, [userProfile?.displayName, userProfile?.voxenId]);
-
-  useEffect(() => {
-    if (!user || !firestore || !userProfile || hasMarkedWelcomeRef.current || userProfile.onboarding?.hasSeenWelcome) {
-      return;
-    }
-
-    hasMarkedWelcomeRef.current = true;
-    updateDoc(doc(firestore, 'voxen_v2_users', user.uid), {
-      'onboarding.hasSeenWelcome': true,
-    }).catch(() => {
-      hasMarkedWelcomeRef.current = false;
-    });
-  }, [user, firestore, userProfile]);
-
-  const onboarding = userProfile?.onboarding;
-  const onboardingReadGuidelines = Boolean(onboarding?.hasReadGuidelines);
-  const onboardingPostedWord = Boolean(onboarding?.hasPostedFirstDailyPractice);
-  const onboardingCompleted = Boolean(onboarding?.completedAt);
-  const profileRole = userProfile?.role || 'disciple';
-  const profileRoleLabel = profileRole === 'tutor' ? 'Tutor' : profileRole === 'admin' ? 'Admin' : 'Discípulo';
 
   const operationMetrics = useMemo(() => {
     const source = messages || [];
@@ -359,64 +316,6 @@ export default function HomePage() {
             </motion.div>
           </div>
         </motion.section>
-
-        {!onboardingCompleted ? (
-          <motion.section
-            className="mt-8 border border-primary/20 bg-black/30 px-6 py-6 shadow-[0_14px_50px_rgba(0,0,0,0.35)]"
-            {...getEntranceMotion(0.22, 14)}
-          >
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/15 pb-4">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-primary/70">Tutorial de entrada</p>
-                <h2 className="mt-2 text-2xl font-black uppercase tracking-wide text-foreground">Bem-vindo ao Voxen</h2>
-                <p className="mt-2 text-sm text-primary/80">
-                  Nível atual: {profileRoleLabel}. Complete os 2 passos para liberar a aba Conhecimento.
-                </p>
-              </div>
-              <span className="border border-primary/25 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-primary">
-                Progresso: {Number(onboardingReadGuidelines) + Number(onboardingPostedWord)}/2
-              </span>
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="border border-primary/15 bg-black/25 p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary/70">Passo 1</p>
-                <p className="mt-2 text-base font-black uppercase tracking-wide text-foreground">Ler Diretrizes</p>
-                <p className="mt-2 text-sm text-primary/80">Abra as diretrizes e confirme o padrão de convivência da comunidade.</p>
-                <p className="mt-3 text-xs font-black uppercase tracking-[0.14em] text-primary/85">
-                  {onboardingReadGuidelines ? 'Concluído' : 'Pendente'}
-                </p>
-                {!onboardingReadGuidelines ? (
-                  <Link
-                    href="/guidelines"
-                    className="mt-3 inline-flex items-center gap-2 border border-primary/25 bg-primary/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-primary transition-all hover:border-primary hover:text-foreground"
-                  >
-                    Abrir diretrizes
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                  </Link>
-                ) : null}
-              </div>
-
-              <div className="border border-primary/15 bg-black/25 p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary/70">Passo 2</p>
-                <p className="mt-2 text-base font-black uppercase tracking-wide text-foreground">Primeira palavra</p>
-                <p className="mt-2 text-sm text-primary/80">Envie sua primeira palavra na aba Prática Diária para concluir o tutorial.</p>
-                <p className="mt-3 text-xs font-black uppercase tracking-[0.14em] text-primary/85">
-                  {onboardingPostedWord ? 'Concluído' : 'Pendente'}
-                </p>
-                {!onboardingPostedWord ? (
-                  <Link
-                    href="/lab/daily-practice"
-                    className="mt-3 inline-flex items-center gap-2 border border-primary/25 bg-primary/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-primary transition-all hover:border-primary hover:text-foreground"
-                  >
-                    Ir para prática diária
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                  </Link>
-                ) : null}
-              </div>
-            </div>
-          </motion.section>
-        ) : null}
 
         <motion.section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5" {...getEntranceMotion(0.28, 18)}>
           {operationalAreas.map((area, index) => {
